@@ -1,0 +1,52 @@
+package channel;
+
+import org.Notification.channel.PushChannel;
+import org.Notification.model.Notification;
+import org.Notification.model.enums.ChannelType;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class PushChannelTest {
+
+    private final PushChannel pushChannel = new PushChannel();
+
+    @Test
+    void getChannelName_shouldReturnPUSH() {
+        assertEquals("PUSH", pushChannel.getChannelName());
+    }
+
+    @Test
+    void send_shouldNotThrowWhenDeviceTokenPresent() {
+        Notification n = new Notification();
+        n.setUserId("user1");
+        n.setMessage("Push message");
+        n.setDeviceToken("device-token-abc");
+        n.setChannel(ChannelType.PUSH);
+
+        assertDoesNotThrow(() -> pushChannel.send(n));
+    }
+
+    @Test
+    void send_shouldThrowWhenDeviceTokenIsNull() {
+        Notification n = new Notification();
+        n.setUserId("user1");
+        n.setMessage("Push message");
+        n.setDeviceToken(null);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> pushChannel.send(n));
+        assertEquals("Device token is required for PUSH channel", ex.getMessage());
+    }
+
+    @Test
+    void send_shouldThrowWhenDeviceTokenIsEmpty() {
+        Notification n = new Notification();
+        n.setDeviceToken("");
+        n.setMessage("Push message");
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> pushChannel.send(n));
+        assertEquals("Device token is required for PUSH channel", ex.getMessage());
+    }
+}
+
+
