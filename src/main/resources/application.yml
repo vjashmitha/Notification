@@ -19,8 +19,8 @@ spring:
 
 aws:
   region: us-east-1
-  accessKeyId:
-  secretKey:
+  accessKeyId: n6mo3v
+  secretKey: 1qockr
   dynamodb:
     endpoint: http://localhost:8000
 
@@ -40,5 +40,6 @@ notification:
     interval: 10000   # 10 seconds
     max-retry: 3
 twilio:
-  account_sid: YOUR_SID
-  auth_token: YOUR_TOKEN
+  account-sid: ${TWILIO_ACCOUNT_SID}
+  auth-token: ${TWILIO_AUTH_TOKEN}
+  phone-number: ${TWILIO_PHONE_NUMBER}

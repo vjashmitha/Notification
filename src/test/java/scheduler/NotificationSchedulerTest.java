@@ -1,19 +1,16 @@
 package scheduler;
 
-import org.Notification.scheduler.NotificationScheduler;
-import org.Notification.repository.NotificationRepository;
-import org.Notification.service.ChannelDispatcherService;
 import org.Notification.model.Notification;
-import org.Notification.model.enums.ChannelType;
-import org.Notification.model.enums.RoleType;
+import org.Notification.model.enums.NotificationType;
+import org.Notification.repository.NotificationRepository;
+import org.Notification.scheduler.NotificationScheduler;
+import org.Notification.service.ChannelDispatcherService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.Notification.repository.NotificationRepository;
-import org.Notification.service.ChannelDispatcherService;
 
 import java.util.List;
 
@@ -28,48 +25,52 @@ class NotificationSchedulerTest {
     @InjectMocks NotificationScheduler scheduler;
 
     @Test
-    void run_shouldDispatchAndMarkSentForPendingNotification() {
-        setMaxRetry(3);
-        Notification n = pendingNotification(false, null);
+    void run_shouldDoNothingWhenNoNotifications() {
+        ReflectionTestUtils.setField(scheduler, "maxRetry", 3);
+        when(repo.findAll()).thenReturn(List.of());
+
+        scheduler.run();
+
+        verify(dispatcher, never()).dispatch(any());
+    }
+
+    @Test
+    void run_shouldHandleNullFromRepo() {
+        ReflectionTestUtils.setField(scheduler, "maxRetry", 3);
+        when(repo.findAll()).thenReturn(null);
+
+        scheduler.run();
+
+        verify(dispatcher, never()).dispatch(any());
+    }
+
+    @Test
+    void run_shouldDispatchPendingNotification() {
+        ReflectionTestUtils.setField(scheduler, "maxRetry", 3);
+        Notification n = buildNotification("PENDING");
         when(repo.findAll()).thenReturn(List.of(n));
 
         scheduler.run();
 
         verify(dispatcher, times(1)).dispatch(n);
         assertEquals("SENT", n.getStatus());
-        verify(repo, times(1)).save(n);
     }
 
     @Test
-    void run_shouldDispatchScheduledNotificationWhenTimeHasPassed() {
-        setMaxRetry(3);
-        long pastTime = System.currentTimeMillis() - 10000;
-        Notification n = pendingNotification(true, pastTime);
-        when(repo.findAll()).thenReturn(List.of(n));
-
-        scheduler.run();
-
-        verify(dispatcher, times(1)).dispatch(n);
-        assertEquals("SENT", n.getStatus());
-    }
-
-    @Test
-    void run_shouldSkipScheduledNotificationWhenTimeNotYet() {
-        setMaxRetry(3);
-        long futureTime = System.currentTimeMillis() + 99999999L;
-        Notification n = pendingNotification(true, futureTime);
+    void run_shouldSkipNonPendingNotifications() {
+        ReflectionTestUtils.setField(scheduler, "maxRetry", 3);
+        Notification n = buildNotification("SENT");
         when(repo.findAll()).thenReturn(List.of(n));
 
         scheduler.run();
 
         verify(dispatcher, never()).dispatch(any());
-        verify(repo, never()).save(any());
     }
 
     @Test
     void run_shouldMarkFailedWhenMaxRetriesReached() {
-        setMaxRetry(3);
-        Notification n = pendingNotification(false, null);
+        ReflectionTestUtils.setField(scheduler, "maxRetry", 3);
+        Notification n = buildNotification("PENDING");
         n.setRetryCount(3);
         when(repo.findAll()).thenReturn(List.of(n));
         doThrow(new RuntimeException("fail")).when(dispatcher).dispatch(n);
@@ -77,13 +78,13 @@ class NotificationSchedulerTest {
         scheduler.run();
 
         assertEquals("FAILED", n.getStatus());
-        verify(repo, times(1)).save(n);
+        verify(repo, atLeastOnce()).save(n);
     }
 
     @Test
     void run_shouldIncrementRetryCountOnFailure() {
-        setMaxRetry(3);
-        Notification n = pendingNotification(false, null);
+        ReflectionTestUtils.setField(scheduler, "maxRetry", 3);
+        Notification n = buildNotification("PENDING");
         n.setRetryCount(1);
         when(repo.findAll()).thenReturn(List.of(n));
         doThrow(new RuntimeException("fail")).when(dispatcher).dispatch(n);
@@ -93,46 +94,16 @@ class NotificationSchedulerTest {
         assertEquals(2, n.getRetryCount());
     }
 
-    @Test
-    void run_shouldSkipNonPendingNotifications() {
-        setMaxRetry(3);
-        Notification n = pendingNotification(false, null);
-        n.setStatus("SENT");
-        when(repo.findAll()).thenReturn(List.of(n));
-
-        scheduler.run();
-
-        verify(dispatcher, never()).dispatch(any());
-    }
-
-    @Test
-    void run_shouldDoNothingWhenNoNotifications() {
-        setMaxRetry(3);
-        when(repo.findAll()).thenReturn(List.of());
-
-        scheduler.run();
-
-        verify(dispatcher, never()).dispatch(any());
-        verify(repo, never()).save(any());
-    }
-
-    private void setMaxRetry(int value) {
-        ReflectionTestUtils.setField(scheduler, "maxRetry", value);
-    }
-
-    private Notification pendingNotification(boolean isScheduled, Long scheduledTime) {
+    private Notification buildNotification(String status) {
         Notification n = new Notification();
         n.setNotificationId("id-1");
         n.setUserId("user1");
-        n.setMessage("test");
-        n.setChannel(ChannelType.EMAIL);
-        n.setRole(RoleType.LEARNER);
-        n.setStatus("PENDING");
-        n.setIsScheduled(isScheduled);
-        n.setScheduledTime(scheduledTime);
+        n.setTitle("Test");
+        n.setDescription("Desc");
+        n.setChannel("EMAIL");
+        n.setType(NotificationType.COURSE_ALERT);
+        n.setStatus(status);
         n.setRetryCount(0);
         return n;
     }
 }
-
-

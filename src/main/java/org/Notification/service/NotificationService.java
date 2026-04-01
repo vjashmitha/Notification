@@ -1,11 +1,9 @@
 package org.Notification.service;
 
 import org.Notification.model.Notification;
-import org.Notification.model.enums.NotificationType;
 import org.Notification.model.UserPreference;
 import org.Notification.repository.NotificationRepository;
 import org.Notification.repository.UserPreferenceRepository;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,90 +26,116 @@ public class NotificationService {
     private SmsService smsService;
 
     @Autowired
-    private InAppService inAppService; // ✅ NEW (clean separation)
+    private InAppService inAppService;
 
-    // ✅ CREATE (FINAL CLEAN VERSION)
+    // ✅ CREATE
     public Notification create(Notification n, String userId, String email) {
 
-        // 🔐 From JWT
+        // 🔐 FROM JWT
         n.setUserId(userId);
         n.setEmail(email);
 
-        // ⚙️ Auto fields
+        // ⚠️ REQUIRED DEFAULTS (VERY IMPORTANT)
         n.setNotificationId(UUID.randomUUID().toString());
         n.setCreatedAt(System.currentTimeMillis());
         n.setStatus("PENDING");
         n.setRetryCount(0);
+        if (n.getNotificationId() == null) {
+            n.setNotificationId(UUID.randomUUID().toString());
+        }
+
+        if (n.getUserId() == null) {
+            throw new RuntimeException("UserId missing from JWT");
+        }
+
+        if (n.getType() == null) {
+            throw new RuntimeException("Type is required");
+        }
 
         if (n.getIsRead() == null) n.setIsRead(false);
         if (n.getIsScheduled() == null) n.setIsScheduled(false);
 
-        // ✅ Preference Check
-        UserPreference pref = prefRepo.findByUserId(userId);
+        // 🚨 VALIDATION (THIS WAS MISSING)
+        if (n.getType() == null) {
+            throw new RuntimeException("Notification type is required");
+        }
+        if (n.getChannel() == null) {
+            throw new RuntimeException("Channel is required");
+        }
 
+        // ✅ USER PREFERENCES
+        UserPreference pref = prefRepo.findByUserId(userId);
         if (pref != null) {
             switch (n.getType()) {
-
                 case FEEDBACK_ALERT:
                     if (Boolean.FALSE.equals(pref.getStudentFeedback())) return null;
                     break;
-
                 case SESSION_REMINDER:
                     if (Boolean.FALSE.equals(pref.getLiveClassReminder())) return null;
                     break;
-
                 case PAYOUT_UPDATE:
                     if (Boolean.FALSE.equals(pref.getPayoutUpdate())) return null;
                     break;
-
                 case STREAK_ALERT:
                     if (Boolean.FALSE.equals(pref.getStreakUpdate())) return null;
                     break;
-
                 case NEW_ENROLLMENT:
                     if (Boolean.FALSE.equals(pref.getNewEnrollment())) return null;
+                    break;
+                default:
                     break;
             }
         }
 
-        // ✅ Save notification
+        // ✅ SAVE FIRST
         Notification saved = repo.save(n);
 
-        // ✅ Update status
-        saved.setStatus("SENT");
-        repo.save(saved);
+        // ✅ CHANNEL LOGIC (IMPORTANT FIXES)
+        try {
+            if ("IN_APP".equalsIgnoreCase(n.getChannel())) {
 
-        // ✅ CHANNEL HANDLING (CLEAN)
+                inAppService.createInApp(
+                        userId,
+                        n.getTitle(),
+                        n.getDescription(),
+                        n.getType(),
+                        n.getRedirectUrl()
+                );
 
-        // 🔹 IN-APP
-        if ("IN_APP".equalsIgnoreCase(n.getChannel())) {
-            inAppService.createInApp(
-                    userId,
-                    n.getTitle(),
-                    n.getDescription(),
-                    n.getType(),
-                    n.getRedirectUrl()   // ✅ important
-            );
+            } else if ("EMAIL".equalsIgnoreCase(n.getChannel())) {
+
+                if (n.getEmail() == null) {
+                    throw new RuntimeException("Email required for EMAIL channel");
+                }
+
+                emailService.sendEmail(
+                        n.getEmail(),
+                        n.getTitle(),
+                        n.getDescription()
+                );
+
+            } else if ("SMS".equalsIgnoreCase(n.getChannel())) {
+
+                if (n.getPhoneNumber() == null) {
+                    throw new RuntimeException("Phone number required for SMS");
+                }
+
+                smsService.sendSms(
+                        n.getPhoneNumber(),
+                        n.getDescription()
+                );
+            }
+
+            // ✅ SUCCESS
+            saved.setStatus("SENT");
+
+        } catch (Exception e) {
+            // ❌ FAILURE HANDLING (VERY IMPORTANT)
+            saved.setStatus("FAILED");
         }
 
-        // 🔹 EMAIL
-        else if ("EMAIL".equalsIgnoreCase(n.getChannel())) {
-            emailService.sendEmail(
-                    n.getEmail(),
-                    n.getTitle(),
-                    n.getDescription()
-            );
-        }
-
-        // 🔹 SMS
-        else if ("SMS".equalsIgnoreCase(n.getChannel())) {
-            smsService.sendSms(
-                    n.getPhoneNumber(),
-                    n.getDescription()
-            );
-        }
-
-        return saved;
+        // ✅ UPDATE FINAL STATUS
+        return repo.save(saved);
     }
 
     // ✅ GET
@@ -148,7 +172,6 @@ public class NotificationService {
 
     // ✅ DELETE
     public void delete(String id) {
-
         Notification existing = (Notification) repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
 

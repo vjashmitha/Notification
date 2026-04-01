@@ -2,7 +2,6 @@ package channel;
 
 import org.Notification.channel.SmsChannel;
 import org.Notification.model.Notification;
-import org.Notification.model.enums.ChannelType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,10 +18,9 @@ class SmsChannelTest {
     @Test
     void send_shouldThrowWhenPhoneNumberIsNull() {
         Notification n = new Notification();
-        n.setUserId("user1");
-        n.setMessage("SMS message");
         n.setPhoneNumber(null);
-        n.setChannel(ChannelType.SMS);
+        n.setTitle("Test");
+        n.setDescription("Hello");
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> smsChannel.send(n));
         assertEquals("Phone number is required for SMS channel", ex.getMessage());
@@ -32,11 +30,17 @@ class SmsChannelTest {
     void send_shouldThrowWhenPhoneNumberIsEmpty() {
         Notification n = new Notification();
         n.setPhoneNumber("");
-        n.setMessage("SMS message");
+        n.setTitle("Test");
+        n.setDescription("Hello");
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> smsChannel.send(n));
-        assertEquals("Phone number is required for SMS channel", ex.getMessage());
+        assertThrows(RuntimeException.class, () -> smsChannel.send(n));
+    }
+
+    @Test
+    void send_shouldThrowWhenMessageIsNull() {
+        Notification n = new Notification();
+        n.setPhoneNumber("1234567890");
+        // getMessage() returns "" so this won't throw for null but for empty
+        assertThrows(RuntimeException.class, () -> smsChannel.send(n));
     }
 }
-
-

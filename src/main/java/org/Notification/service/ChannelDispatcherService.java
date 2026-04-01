@@ -11,51 +11,44 @@ import java.util.Map;
 @Service
 public class ChannelDispatcherService {
 
-    // Map to store channel name → channel object
     private final Map<String, NotificationChannel> channelMap = new HashMap<>();
-
     private final int maxRetry = 3;
 
-    //  Constructor → ONLY mapping (no calling)
     public ChannelDispatcherService(List<NotificationChannel> channels) {
         for (NotificationChannel c : channels) {
             channelMap.put(c.getChannelName(), c);
         }
     }
 
-    // Main method → decides & calls correct channel
-    public void dispatch(Notification n) throws InterruptedException {
+    public void dispatch(Notification n) {
 
         if (n == null || n.getChannel() == null) {
             System.out.println("Invalid notification");
             return;
         }
 
-        String channelName = n.getChannel(); // EMAIL, SMS, PUSH, IN_APP
-
-        NotificationChannel channel = channelMap.get(channelName);
+        NotificationChannel channel = channelMap.get(n.getChannel());
 
         if (channel == null) {
-            System.out.println("No channel found for " + channelName);
+            System.out.println("No channel found for " + n.getChannel());
             return;
         }
 
         try {
-            //  Only ONE channel will be called
             channel.send(n);
-
-            System.out.println("Notification sent via " + channelName);
-
+            System.out.println("Notification sent via " + n.getChannel());
         } catch (Exception e) {
 
-            System.out.println("Error sending notification: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
 
-            //  Retry logic
-            if (n.getRetryCount() >= maxRetry) {
-                System.out.println("Max retries reached for notification " + n.getNotificationId());
+            int retry = n.getRetryCount() == null ? 0 : n.getRetryCount();
+
+            if (retry >= maxRetry) {
+                System.out.println("Max retries reached for " + n.getNotificationId());
+                n.setStatus("FAILED");
             } else {
-                n.setRetryCount(n.getRetryCount() + 1);
-                dispatch(n); // retry again
+                n.setRetryCount(retry + 1);
+                dispatch(n); // retry
             }
         }
     }

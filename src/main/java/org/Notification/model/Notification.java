@@ -2,7 +2,6 @@ package org.Notification.model;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.*;
 import lombok.Data;
-
 import org.Notification.model.enums.NotificationType;
 
 import javax.validation.constraints.NotBlank;
@@ -16,11 +15,11 @@ public class Notification {
     @DynamoDBHashKey(attributeName = "notificationId")
     private String notificationId;
 
-    // ✅ GSI for querying by user
+    // ✅ GSI (for querying by user)
     @DynamoDBIndexHashKey(globalSecondaryIndexName = "userId-index", attributeName = "userId")
-    private String userId; // from JWT
+    private String userId;
 
-    // ✅ UI REQUIRED
+    // ✅ REQUIRED FIELDS
     @NotBlank
     @DynamoDBAttribute(attributeName = "title")
     private String title;
@@ -36,9 +35,9 @@ public class Notification {
 
     @NotBlank
     @DynamoDBAttribute(attributeName = "channel")
-    private String channel; // IN_APP / EMAIL / SMS
+    private String channel; // EMAIL / SMS / PUSH / IN_APP
 
-    // ✅ OPTIONAL / SYSTEM
+    // ✅ OPTIONAL (based on channel)
     @DynamoDBAttribute(attributeName = "email")
     private String email;
 
@@ -48,6 +47,7 @@ public class Notification {
     @DynamoDBAttribute(attributeName = "deviceToken")
     private String deviceToken;
 
+    // ✅ SYSTEM FIELDS
     @DynamoDBAttribute(attributeName = "isRead")
     private Boolean isRead;
 

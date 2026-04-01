@@ -1,7 +1,7 @@
 package repository;
 
-import org.Notification.repository.InAppRepository;
 import org.Notification.model.InAppNotification;
+import org.Notification.repository.InAppRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -21,64 +21,46 @@ class InAppRepositoryTest {
     @Mock InAppRepository repo;
 
     @Test
-    void save_shouldPersistInAppNotification() {
-        InAppNotification n = buildNotif("user1", false);
-        when(repo.save(n)).thenReturn(n);
-
-        InAppNotification saved = repo.save(n);
-
-        assertNotNull(saved);
-        assertEquals("user1", saved.getUserId());
+    void save_shouldCallSave() {
+        InAppNotification n = buildNotif("user1");
+        doNothing().when(repo).save(n);
+        repo.save(n);
         verify(repo, times(1)).save(n);
     }
 
     @Test
-    void findByUserId_shouldReturnList() {
-        InAppNotification n = buildNotif("user1", false);
-        when(repo.findByUserId("user1")).thenReturn(List.of(n));
-
-        List<InAppNotification> result = repo.findByUserId("user1");
-
-        assertEquals(1, result.size());
-        assertEquals("user1", result.get(0).getUserId());
+    void findByUserId_shouldReturnCount() {
+        when(repo.findByUserId("user1")).thenReturn(1);
+        assertEquals(1, repo.findByUserId("user1"));
     }
 
     @Test
-    void findByUserId_shouldReturnEmptyForUnknown() {
-        when(repo.findByUserId("unknown")).thenReturn(List.of());
-        assertTrue(repo.findByUserId("unknown").isEmpty());
+    void findByUserId_shouldReturnZeroForUnknown() {
+        when(repo.findByUserId("unknown")).thenReturn(0);
+        assertEquals(0, repo.findByUserId("unknown"));
     }
 
     @Test
-    void findByUserIdAndIsRead_shouldReturnUnreadNotifications() {
-        InAppNotification n = buildNotif("user1", false);
-        when(repo.findByUserIdAndIsRead("user1", false)).thenReturn(List.of(n));
-
-        Collection<Object> result = repo.findByUserIdAndIsRead("user1", false);
-
-        assertEquals(1, result.size());
+    void findByUserIdAndIsRead_shouldReturnUnread() {
+        InAppNotification n = buildNotif("user1");
+        Collection<Object> expected = List.of(n);
+        when(repo.findByUserIdAndIsRead("user1", false)).thenReturn(expected);
+        assertEquals(1, repo.findByUserIdAndIsRead("user1", false).size());
     }
 
     @Test
     void findByUserIdAndIsRead_shouldReturnEmptyWhenAllRead() {
         when(repo.findByUserIdAndIsRead("user1", false)).thenReturn(List.of());
-
-        Collection<Object> result = repo.findByUserIdAndIsRead("user1", false);
-
-        assertTrue(result.isEmpty());
+        assertTrue(repo.findByUserIdAndIsRead("user1", false).isEmpty());
     }
 
     @Test
-    void findById_shouldReturnNotificationWhenExists() {
+    void findById_shouldReturnNotification() {
         String id = UUID.randomUUID().toString();
-        InAppNotification n = buildNotif("user1", false);
+        InAppNotification n = buildNotif("user1");
         n.setId(id);
         when(repo.findById(id)).thenReturn(Optional.of(n));
-
-        Optional<InAppNotification> result = repo.findById(id);
-
-        assertTrue(result.isPresent());
-        assertEquals(id, result.get().getId());
+        assertTrue(repo.findById(id).isPresent());
     }
 
     @Test
@@ -88,23 +70,20 @@ class InAppRepositoryTest {
     }
 
     @Test
-    void delete_shouldRemoveNotification() {
-        InAppNotification n = buildNotif("user1", false);
-        doNothing().when(repo).delete(n);
-        repo.delete(n);
-        verify(repo, times(1)).delete(n);
+    void deleteById_shouldCallDelete() {
+        doNothing().when(repo).deleteById("id-1");
+        repo.deleteById("id-1");
+        verify(repo, times(1)).deleteById("id-1");
     }
 
-    private InAppNotification buildNotif(String userId, boolean isRead) {
+    private InAppNotification buildNotif(String userId) {
         InAppNotification n = new InAppNotification();
         n.setId(UUID.randomUUID().toString());
         n.setUserId(userId);
-        n.setMessage("Test");
-        n.setStatus("SENT");
+        n.setTitle("Test");
+        n.setDescription("Desc");
+        n.setIsRead(false);
         n.setCreatedAt(System.currentTimeMillis());
-        n.setIsRead(isRead);
         return n;
     }
 }
-
-

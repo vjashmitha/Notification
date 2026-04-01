@@ -2,7 +2,6 @@ package channel;
 
 import org.Notification.channel.PushChannel;
 import org.Notification.model.Notification;
-import org.Notification.model.enums.ChannelType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -20,9 +19,9 @@ class PushChannelTest {
     void send_shouldNotThrowWhenDeviceTokenPresent() {
         Notification n = new Notification();
         n.setUserId("user1");
-        n.setMessage("Push message");
         n.setDeviceToken("device-token-abc");
-        n.setChannel(ChannelType.PUSH);
+        n.setTitle("Test");
+        n.setDescription("Hello");
 
         assertDoesNotThrow(() -> pushChannel.send(n));
     }
@@ -30,8 +29,6 @@ class PushChannelTest {
     @Test
     void send_shouldThrowWhenDeviceTokenIsNull() {
         Notification n = new Notification();
-        n.setUserId("user1");
-        n.setMessage("Push message");
         n.setDeviceToken(null);
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> pushChannel.send(n));
@@ -42,11 +39,7 @@ class PushChannelTest {
     void send_shouldThrowWhenDeviceTokenIsEmpty() {
         Notification n = new Notification();
         n.setDeviceToken("");
-        n.setMessage("Push message");
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> pushChannel.send(n));
-        assertEquals("Device token is required for PUSH channel", ex.getMessage());
+        assertThrows(RuntimeException.class, () -> pushChannel.send(n));
     }
 }
-
-

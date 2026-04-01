@@ -1,9 +1,8 @@
 package repository;
 
-import org.Notification.repository.NotificationRepository;
 import org.Notification.model.Notification;
-import org.Notification.model.enums.ChannelType;
-import org.Notification.model.enums.RoleType;
+import org.Notification.model.enums.NotificationType;
+import org.Notification.repository.NotificationRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -22,12 +21,10 @@ class NotificationRepositoryTest {
     @Mock NotificationRepository repo;
 
     @Test
-    void save_shouldPersistNotification() {
-        Notification n = buildNotification("user1");
+    void save_shouldReturnSavedNotification() {
+        Notification n = buildNotification();
         when(repo.save(n)).thenReturn(n);
-
         Notification saved = repo.save(n);
-
         assertNotNull(saved);
         assertEquals("user1", saved.getUserId());
         verify(repo, times(1)).save(n);
@@ -35,13 +32,10 @@ class NotificationRepositoryTest {
 
     @Test
     void findByUserId_shouldReturnList() {
-        Notification n = buildNotification("user1");
+        Notification n = buildNotification();
         when(repo.findByUserId("user1")).thenReturn(List.of(n));
-
         List<Notification> result = repo.findByUserId("user1");
-
         assertEquals(1, result.size());
-        assertEquals("user1", result.get(0).getUserId());
     }
 
     @Test
@@ -51,16 +45,12 @@ class NotificationRepositoryTest {
     }
 
     @Test
-    void findById_shouldReturnNotificationWhenExists() {
+    void findById_shouldReturnNotification() {
         String id = UUID.randomUUID().toString();
-        Notification n = buildNotification("user1");
-        n.setNotificationId(id);
+        Notification n = buildNotification();
         when(repo.findById(id)).thenReturn(Optional.of(n));
-
         Optional<Notification> result = repo.findById(id);
-
         assertTrue(result.isPresent());
-        assertEquals(id, result.get().getNotificationId());
     }
 
     @Test
@@ -70,23 +60,30 @@ class NotificationRepositoryTest {
     }
 
     @Test
-    void delete_shouldRemoveNotification() {
-        Notification n = buildNotification("user1");
+    void delete_shouldCallDelete() {
+        Notification n = buildNotification();
         doNothing().when(repo).delete(n);
         repo.delete(n);
         verify(repo, times(1)).delete(n);
     }
 
-    private Notification buildNotification(String userId) {
+    @Test
+    void findAll_shouldReturnList() {
+        Notification n = buildNotification();
+        when(repo.findAll()).thenReturn(List.of(n));
+        List<Notification> result = repo.findAll();
+        assertEquals(1, result.size());
+    }
+
+    private Notification buildNotification() {
         Notification n = new Notification();
         n.setNotificationId(UUID.randomUUID().toString());
-        n.setUserId(userId);
-        n.setChannel(ChannelType.EMAIL);
-        n.setRole(RoleType.LEARNER);
-        n.setMessage("Test");
+        n.setUserId("user1");
+        n.setTitle("Test");
+        n.setDescription("Desc");
+        n.setChannel("EMAIL");
+        n.setType(NotificationType.COURSE_ALERT);
         n.setStatus("PENDING");
         return n;
     }
 }
-
-

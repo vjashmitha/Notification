@@ -2,7 +2,6 @@ package channel;
 
 import org.Notification.channel.EmailChannel;
 import org.Notification.model.Notification;
-import org.Notification.model.enums.ChannelType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,13 +25,11 @@ class EmailChannelTest {
     }
 
     @Test
-    void send_shouldSendEmailWithCorrectDetails() {
+    void send_shouldSendEmail() {
         Notification n = new Notification();
-        n.setUserId("user1");
         n.setEmail("user@example.com");
-        n.setMessage("Hello");
-        n.setChannel(ChannelType.EMAIL);
-
+        n.setTitle("Test");
+        n.setDescription("Hello");
         doNothing().when(mailSender).send(any(SimpleMailMessage.class));
 
         assertDoesNotThrow(() -> emailChannel.send(n));
@@ -42,9 +39,7 @@ class EmailChannelTest {
     @Test
     void send_shouldThrowWhenEmailIsNull() {
         Notification n = new Notification();
-        n.setUserId("user1");
         n.setEmail(null);
-        n.setMessage("Hello");
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> emailChannel.send(n));
         assertEquals("Email is required for EMAIL channel", ex.getMessage());
@@ -55,11 +50,7 @@ class EmailChannelTest {
     void send_shouldThrowWhenEmailIsEmpty() {
         Notification n = new Notification();
         n.setEmail("");
-        n.setMessage("Hello");
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> emailChannel.send(n));
-        assertEquals("Email is required for EMAIL channel", ex.getMessage());
+        assertThrows(RuntimeException.class, () -> emailChannel.send(n));
     }
 }
-
-

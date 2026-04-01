@@ -27,27 +27,31 @@ public class SmsChannel implements NotificationChannel {
     @Override
     public void send(Notification n) {
 
-        // FIXED validation
-        if (n.getPhoneNumber() == null || n.getPhoneNumber().isEmpty()) {
+        // ✅ Validation
+        if (n == null || n.getPhoneNumber() == null || n.getPhoneNumber().isEmpty()) {
             throw new RuntimeException("Phone number is required for SMS channel");
         }
 
+        if (n.getMessage() == null || n.getMessage().isEmpty()) {
+            throw new RuntimeException("Message content is required");
+        }
+
         try {
-            // Initialize Twilio
+            // ✅ Initialize Twilio (only once ideally, but okay here for now)
             Twilio.init(accountSid, authToken);
 
-            // Send SMS
+            // ✅ Send SMS
             Message message = Message.creator(
-                    new PhoneNumber((String) n.getPhoneNumber()), // TO
-                    new PhoneNumber(fromNumber),          // FROM (use property)
-                    n.getMessage()
+                    new PhoneNumber(n.getPhoneNumber()),   // TO
+                    new PhoneNumber(fromNumber),           // FROM
+                    n.getMessage()                         // MESSAGE
             ).create();
 
-            System.out.println("SMS sent successfully. SID: " + message.getSid());
+            System.out.println("✅ SMS sent successfully. SID: " + message.getSid());
 
         } catch (Exception e) {
-            System.out.println("Error sending SMS: " + e.getMessage());
-            throw new RuntimeException("SMS sending failed");
+            System.out.println(" Error sending SMS: " + e.getMessage());
+            throw new RuntimeException("SMS sending failed", e);
         }
     }
 }

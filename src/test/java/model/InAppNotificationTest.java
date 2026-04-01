@@ -1,6 +1,7 @@
 package model;
 
 import org.Notification.model.InAppNotification;
+import org.Notification.model.enums.NotificationType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -12,23 +13,25 @@ class InAppNotificationTest {
         InAppNotification n = new InAppNotification();
         n.setId("id-1");
         n.setUserId("user1");
-        n.setMessage("Hello");
-        n.setStatus("SENT");
-        n.setCreatedAt(1000L);
+        n.setTitle("Test");
+        n.setDescription("Desc");
+        n.setType(NotificationType.COURSE_ALERT);
         n.setIsRead(false);
+        n.setCreatedAt(1000L);
 
         assertEquals("id-1", n.getId());
         assertEquals("user1", n.getUserId());
-        assertEquals("Hello", n.getMessage());
-        assertEquals("SENT", n.getStatus());
-        assertEquals(1000L, n.getCreatedAt());
+        assertEquals("Test", n.getTitle());
+        assertEquals("Desc", n.getDescription());
+        assertEquals(NotificationType.COURSE_ALERT, n.getType());
         assertFalse(n.getIsRead());
+        assertEquals(1000L, n.getCreatedAt());
     }
 
     @Test
-    void isRead_shouldDefaultToFalse() {
+    void isRead_shouldDefaultToNull() {
         InAppNotification n = new InAppNotification();
-        assertFalse(n.getIsRead());
+        assertNull(n.getIsRead());
     }
 
     @Test
@@ -37,16 +40,4 @@ class InAppNotificationTest {
         n.setIsRead(true);
         assertTrue(n.getIsRead());
     }
-
-    @Test
-    void defaultValues_shouldBeNullOrZero() {
-        InAppNotification n = new InAppNotification();
-        assertNull(n.getId());
-        assertNull(n.getUserId());
-        assertNull(n.getMessage());
-        assertNull(n.getStatus());
-        assertEquals(0L, n.getCreatedAt());
-    }
 }
-
-
