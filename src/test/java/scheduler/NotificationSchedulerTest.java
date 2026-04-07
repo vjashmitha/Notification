@@ -35,16 +35,6 @@ class NotificationSchedulerTest {
     }
 
     @Test
-    void run_shouldHandleNullFromRepo() {
-        ReflectionTestUtils.setField(scheduler, "maxRetry", 3);
-        when(repo.findAll()).thenReturn(null);
-
-        scheduler.run();
-
-        verify(dispatcher, never()).dispatch(any());
-    }
-
-    @Test
     void run_shouldDispatchPendingNotification() {
         ReflectionTestUtils.setField(scheduler, "maxRetry", 3);
         Notification n = buildNotification("PENDING");

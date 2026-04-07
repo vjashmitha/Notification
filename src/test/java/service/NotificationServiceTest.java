@@ -34,7 +34,7 @@ class NotificationServiceTest {
     void create_shouldSetAutoFieldsAndSave() {
         Notification n = buildNotification("EMAIL");
         when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(prefRepo.findByUserId("user1")).thenReturn(null);
+        when(prefRepo.getByUserId("user1")).thenReturn(null);
 
         Notification result = service.create(n, "user1", "user@example.com");
 
@@ -50,7 +50,7 @@ class NotificationServiceTest {
     void create_shouldCallEmailServiceForEmailChannel() {
         Notification n = buildNotification("EMAIL");
         when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(prefRepo.findByUserId("user1")).thenReturn(null);
+        when(prefRepo.getByUserId("user1")).thenReturn(null);
 
         service.create(n, "user1", "user@example.com");
 
@@ -62,7 +62,7 @@ class NotificationServiceTest {
         Notification n = buildNotification("SMS");
         n.setPhoneNumber("1234567890");
         when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(prefRepo.findByUserId("user1")).thenReturn(null);
+        when(prefRepo.getByUserId("user1")).thenReturn(null);
 
         service.create(n, "user1", "user@example.com");
 
@@ -73,7 +73,7 @@ class NotificationServiceTest {
     void create_shouldCallInAppServiceForInAppChannel() {
         Notification n = buildNotification("IN_APP");
         when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(prefRepo.findByUserId("user1")).thenReturn(null);
+        when(prefRepo.getByUserId("user1")).thenReturn(null);
 
         service.create(n, "user1", "user@example.com");
 
@@ -94,6 +94,34 @@ class NotificationServiceTest {
     void getByUser_shouldReturnEmptyList() {
         when(repo.findByUserId("unknown")).thenReturn(List.of());
         assertTrue(service.getByUser("unknown").isEmpty());
+    }
+
+    @Test
+    void getById_shouldReturnNotification() {
+        Notification n = buildNotification("EMAIL");
+        n.setNotificationId("id-1");
+        when(repo.findById("id-1")).thenReturn(java.util.Optional.of(n));
+
+        Notification result = service.getById("id-1");
+        assertEquals("id-1", result.getNotificationId());
+    }
+
+    @Test
+    void getById_shouldThrowWhenNotFound() {
+        when(repo.findById("none")).thenReturn(java.util.Optional.empty());
+        assertThrows(RuntimeException.class, () -> service.getById("none"));
+    }
+
+    @Test
+    void delete_shouldCallRepoDelete() {
+        Notification n = buildNotification("EMAIL");
+        n.setNotificationId("id-1");
+        when(repo.findById("id-1")).thenReturn(java.util.Optional.of(n));
+        doNothing().when(repo).delete(n);
+
+        service.delete("id-1");
+
+        verify(repo, times(1)).delete(n);
     }
 
     private Notification buildNotification(String channel) {

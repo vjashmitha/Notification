@@ -22,49 +22,79 @@ public class NotificationController {
     @Autowired
     private JwtUtil jwtUtil;
 
-    // ✅ CREATE (UPDATED)
+    // ✅ CREATE NOTIFICATION
     @PostMapping
     public ResponseEntity<Notification> create(
             @RequestHeader("Authorization") String authHeader,
             @Valid @RequestBody Notification n) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid Authorization Header");
+        }
 
         String token = authHeader.substring(7);
 
         String userId = jwtUtil.getUserId(token);
         String email = jwtUtil.getEmail(token);
 
+        Notification saved =
+                service.create(n, userId, email);
 
-
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(service.create(n, userId, email));
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(saved);
     }
 
-    // ✅ GET BY USER (from token)
+    // ✅ GET USER NOTIFICATIONS
     @GetMapping
     public ResponseEntity<List<Notification>> getByUser(
             @RequestHeader("Authorization") String authHeader) {
 
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid Authorization Header");
+        }
+
         String token = authHeader.substring(7);
+
         String userId = jwtUtil.getUserId(token);
 
-        return ResponseEntity.ok(service.getByUser(userId));
+        List<Notification> notifications =
+                service.getByUser(userId);
+
+        return ResponseEntity.ok(notifications);
     }
 
-    // ✅ UPDATE
+    // ✅ GET BY ID (NEW — IMPORTANT)
+    @GetMapping("/{id}")
+    public ResponseEntity<Notification> getById(
+            @PathVariable String id) {
+
+        Notification notification =
+                service.getById(id);
+
+        return ResponseEntity.ok(notification);
+    }
+
+    // ✅ UPDATE NOTIFICATION
     @PutMapping("/{id}")
     public ResponseEntity<Notification> updateNotification(
             @PathVariable String id,
             @RequestBody Notification updatedNotification) {
 
-        Notification updated = service.update(id, updatedNotification);
+        Notification updated =
+                service.update(id, updatedNotification);
+
         return ResponseEntity.ok(updated);
     }
 
-    // ✅ DELETE
+    // ✅ DELETE NOTIFICATION
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteNotification(@PathVariable String id) {
+    public ResponseEntity<String> deleteNotification(
+            @PathVariable String id) {
 
         service.delete(id);
-        return ResponseEntity.ok("Notification deleted successfully");
+
+        return ResponseEntity.ok(
+                "Notification deleted successfully");
     }
 }

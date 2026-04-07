@@ -7,7 +7,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,29 +28,33 @@ class InAppRepositoryTest {
     }
 
     @Test
-    void findByUserId_shouldReturnCount() {
-        when(repo.findByUserId("user1")).thenReturn(1);
-        assertEquals(1, repo.findByUserId("user1"));
-    }
-
-    @Test
-    void findByUserId_shouldReturnZeroForUnknown() {
-        when(repo.findByUserId("unknown")).thenReturn(0);
-        assertEquals(0, repo.findByUserId("unknown"));
-    }
-
-    @Test
-    void findByUserIdAndIsRead_shouldReturnUnread() {
+    void getByUserId_shouldReturnList() {
         InAppNotification n = buildNotif("user1");
-        Collection<Object> expected = List.of(n);
-        when(repo.findByUserIdAndIsRead("user1", false)).thenReturn(expected);
-        assertEquals(1, repo.findByUserIdAndIsRead("user1", false).size());
+        when(repo.getByUserId("user1")).thenReturn(List.of(n));
+        List<InAppNotification> result = repo.getByUserId("user1");
+        assertEquals(1, result.size());
+        assertEquals("user1", result.get(0).getUserId());
     }
 
     @Test
-    void findByUserIdAndIsRead_shouldReturnEmptyWhenAllRead() {
-        when(repo.findByUserIdAndIsRead("user1", false)).thenReturn(List.of());
-        assertTrue(repo.findByUserIdAndIsRead("user1", false).isEmpty());
+    void getByUserId_shouldReturnEmptyForUnknown() {
+        when(repo.getByUserId("unknown")).thenReturn(List.of());
+        assertTrue(repo.getByUserId("unknown").isEmpty());
+    }
+
+    @Test
+    void getUnread_shouldReturnUnreadNotifications() {
+        InAppNotification n = buildNotif("user1");
+        when(repo.getUnread("user1")).thenReturn(List.of(n));
+        List<InAppNotification> result = repo.getUnread("user1");
+        assertEquals(1, result.size());
+        assertFalse(result.get(0).getIsRead());
+    }
+
+    @Test
+    void getUnread_shouldReturnEmptyWhenAllRead() {
+        when(repo.getUnread("user1")).thenReturn(List.of());
+        assertTrue(repo.getUnread("user1").isEmpty());
     }
 
     @Test
@@ -74,6 +77,14 @@ class InAppRepositoryTest {
         doNothing().when(repo).deleteById("id-1");
         repo.deleteById("id-1");
         verify(repo, times(1)).deleteById("id-1");
+    }
+
+    @Test
+    void delete_shouldCallDelete() {
+        InAppNotification n = buildNotif("user1");
+        doNothing().when(repo).delete(n);
+        repo.delete(n);
+        verify(repo, times(1)).delete(n);
     }
 
     private InAppNotification buildNotif(String userId) {

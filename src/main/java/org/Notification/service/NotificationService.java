@@ -4,6 +4,7 @@ import org.Notification.model.Notification;
 import org.Notification.model.UserPreference;
 import org.Notification.repository.NotificationRepository;
 import org.Notification.repository.UserPreferenceRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,126 +29,211 @@ public class NotificationService {
     @Autowired
     private InAppService inAppService;
 
-    // ✅ CREATE
-    public Notification create(Notification n, String userId, String email) {
 
-        // 🔐 FROM JWT
+    // ✅ CREATE NOTIFICATION
+    public Notification create(Notification n,
+                               String userId,
+                               String email) {
+
+        // 🔐 SET FROM JWT
         n.setUserId(userId);
         n.setEmail(email);
 
-        // ⚠️ REQUIRED DEFAULTS (VERY IMPORTANT)
+        // ✅ DEFAULT VALUES
         n.setNotificationId(UUID.randomUUID().toString());
         n.setCreatedAt(System.currentTimeMillis());
         n.setStatus("PENDING");
         n.setRetryCount(0);
-        if (n.getNotificationId() == null) {
-            n.setNotificationId(UUID.randomUUID().toString());
-        }
 
         if (n.getUserId() == null) {
             throw new RuntimeException("UserId missing from JWT");
         }
 
         if (n.getType() == null) {
-            throw new RuntimeException("Type is required");
+            throw new RuntimeException("Notification type required");
         }
 
-        if (n.getIsRead() == null) n.setIsRead(false);
-        if (n.getIsScheduled() == null) n.setIsScheduled(false);
-
-        // 🚨 VALIDATION (THIS WAS MISSING)
-        if (n.getType() == null) {
-            throw new RuntimeException("Notification type is required");
-        }
         if (n.getChannel() == null) {
-            throw new RuntimeException("Channel is required");
+            throw new RuntimeException("Channel required");
         }
 
-        // ✅ USER PREFERENCES
-        UserPreference pref = prefRepo.findByUserId(userId);
+        if (n.getIsRead() == null)
+            n.setIsRead(false);
+
+        if (n.getIsScheduled() == null)
+            n.setIsScheduled(false);
+
+
+        // ✅ USER PREFERENCE CHECK (CORRECT LOGIC)
+
+        UserPreference pref =
+                prefRepo.getByUserId(userId);
+
         if (pref != null) {
+
             switch (n.getType()) {
+
                 case FEEDBACK_ALERT:
-                    if (Boolean.FALSE.equals(pref.getStudentFeedback())) return null;
+
+                    if (Boolean.FALSE.equals(
+                            pref.getStudentFeedback())) {
+
+                        throw new RuntimeException(
+                                "FEEDBACK_ALERT disabled by user");
+                    }
+
                     break;
+
+
                 case SESSION_REMINDER:
-                    if (Boolean.FALSE.equals(pref.getLiveClassReminder())) return null;
+
+                    if (Boolean.FALSE.equals(
+                            pref.getLiveClassReminder())) {
+
+                        throw new RuntimeException(
+                                "SESSION_REMINDER disabled by user");
+                    }
+
                     break;
+
+
                 case PAYOUT_UPDATE:
-                    if (Boolean.FALSE.equals(pref.getPayoutUpdate())) return null;
+
+                    if (Boolean.FALSE.equals(
+                            pref.getPayoutUpdate())) {
+
+                        throw new RuntimeException(
+                                "PAYOUT_UPDATE disabled by user");
+                    }
+
                     break;
+
+
                 case STREAK_ALERT:
-                    if (Boolean.FALSE.equals(pref.getStreakUpdate())) return null;
+
+                    if (Boolean.FALSE.equals(
+                            pref.getStreakUpdate())) {
+
+                        throw new RuntimeException(
+                                "STREAK_ALERT disabled by user");
+                    }
+
                     break;
+
+
                 case NEW_ENROLLMENT:
-                    if (Boolean.FALSE.equals(pref.getNewEnrollment())) return null;
+
+                    if (Boolean.FALSE.equals(
+                            pref.getNewEnrollment())) {
+
+                        throw new RuntimeException(
+                                "NEW_ENROLLMENT disabled by user");
+                    }
+
                     break;
+
                 default:
                     break;
             }
         }
 
+
         // ✅ SAVE FIRST
         Notification saved = repo.save(n);
 
-        // ✅ CHANNEL LOGIC (IMPORTANT FIXES)
+
+        // ✅ CHANNEL LOGIC
+
         try {
-            if ("IN_APP".equalsIgnoreCase(n.getChannel())) {
+
+            if ("IN_APP".equalsIgnoreCase(
+                    n.getChannel())) {
 
                 inAppService.createInApp(
                         userId,
                         n.getTitle(),
                         n.getDescription(),
                         n.getType(),
-                        n.getRedirectUrl()
-                );
+                        n.getRedirectUrl());
 
-            } else if ("EMAIL".equalsIgnoreCase(n.getChannel())) {
+            }
+
+            else if ("EMAIL".equalsIgnoreCase(
+                    n.getChannel())) {
 
                 if (n.getEmail() == null) {
-                    throw new RuntimeException("Email required for EMAIL channel");
+
+                    throw new RuntimeException(
+                            "Email required for EMAIL channel");
                 }
 
                 emailService.sendEmail(
                         n.getEmail(),
                         n.getTitle(),
-                        n.getDescription()
-                );
+                        n.getDescription());
+            }
 
-            } else if ("SMS".equalsIgnoreCase(n.getChannel())) {
+            else if ("SMS".equalsIgnoreCase(
+                    n.getChannel())) {
 
                 if (n.getPhoneNumber() == null) {
-                    throw new RuntimeException("Phone number required for SMS");
+
+                    throw new RuntimeException(
+                            "Phone number required for SMS");
                 }
 
                 smsService.sendSms(
                         n.getPhoneNumber(),
-                        n.getDescription()
-                );
+                        n.getDescription());
             }
 
             // ✅ SUCCESS
             saved.setStatus("SENT");
 
-        } catch (Exception e) {
-            // ❌ FAILURE HANDLING (VERY IMPORTANT)
+        }
+
+        catch (Exception e) {
+
+            // ❌ FAILURE
             saved.setStatus("FAILED");
         }
 
-        // ✅ UPDATE FINAL STATUS
+
+        // ✅ FINAL SAVE
         return repo.save(saved);
     }
 
-    // ✅ GET
+
+
+    // ✅ GET USER NOTIFICATIONS
     public List<Notification> getByUser(String userId) {
+
         return repo.findByUserId(userId);
     }
 
-    // ✅ UPDATE
-    public Notification update(String id, Notification updated) {
 
-        Notification existing = (Notification) repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Notification not found"));
+
+    // ✅ GET BY ID
+    public Notification getById(String id) {
+
+        return repo.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Notification not found"));
+    }
+
+
+
+    // ✅ UPDATE
+    public Notification update(String id,
+                               Notification updated) {
+
+        Notification existing =
+                repo.findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Notification not found"));
+
 
         if (updated.getTitle() != null)
             existing.setTitle(updated.getTitle());
@@ -167,14 +253,22 @@ public class NotificationService {
         if (updated.getDeviceToken() != null)
             existing.setDeviceToken(updated.getDeviceToken());
 
+
         return repo.save(existing);
     }
 
+
+
     // ✅ DELETE
     public void delete(String id) {
-        Notification existing = (Notification) repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Notification not found"));
+
+        Notification existing =
+                repo.findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Notification not found"));
 
         repo.delete(existing);
     }
+
 }

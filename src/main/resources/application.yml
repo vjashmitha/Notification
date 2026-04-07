@@ -19,8 +19,8 @@ spring:
 
 aws:
   region: us-east-1
-  accessKeyId: n6mo3v
-  secretKey: 1qockr
+  accessKeyId: 5ceh4k
+  secretKey: 35ffjb
   dynamodb:
     endpoint: http://localhost:8000
 

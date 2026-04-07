@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class NotificationScheduler {
 
@@ -25,10 +27,10 @@ public class NotificationScheduler {
 
         System.out.println("Scheduler running...");
 
-        Iterable<Notification> list = repo.findAll();
+        List<Notification> list = repo.findAll();
 
-        if (list == null) {
-            System.out.println("No data from DB");
+        if (list.isEmpty()) {
+            System.out.println("No data found in DB");
             return;
         }
 

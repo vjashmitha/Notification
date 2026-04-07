@@ -1,7 +1,9 @@
 package org.Notification.repository;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.*;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+
 import org.Notification.model.UserPreference;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -11,17 +13,33 @@ public class UserPreferenceRepository {
     @Autowired
     private DynamoDBMapper dynamoDBMapper;
 
+
     // ✅ SAVE
-    public void save(UserPreference pref) {
+    public UserPreference save(UserPreference pref) {
+
         dynamoDBMapper.save(pref);
+
+        return pref;
     }
 
-    // ✅ GET BY USER ID
-    public UserPreference getByUserId(String userId) {
-        return dynamoDBMapper.load(UserPreference.class, userId);
-    }
+
+    // ✅ FIND BY USER ID (PRIMARY KEY)
 
     public UserPreference findByUserId(String userId) {
-        return null;
+
+        return dynamoDBMapper.load(
+                UserPreference.class,
+                userId);
     }
+
+
+    // ✅ OPTIONAL METHOD (same as find)
+
+    public UserPreference getByUserId(String userId) {
+
+        return dynamoDBMapper.load(
+                UserPreference.class,
+                userId);
+    }
+
 }

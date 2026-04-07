@@ -11,7 +11,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,29 +28,55 @@ class InAppControllerTest {
     private static final String AUTH = "Bearer test-token";
 
     @Test
-    void PUT_markAsRead_shouldReturnNotFound() throws Exception {
-        when(repo.findById("missing")).thenReturn(Optional.empty());
+    void GET_shouldReturnNotifications() throws Exception {
+        when(jwtUtil.getUserId("test-token")).thenReturn("user1");
+        InAppNotification n1 = buildNotif("id-1", "user1", 1000L);
+        InAppNotification n2 = buildNotif("id-2", "user1", 2000L);
+        when(repo.getByUserId("user1")).thenReturn(List.of(n1, n2));
 
-        mockMvc.perform(put("/api/inapps/read/missing"))
+        mockMvc.perform(get("/api/inapps").header("Authorization", AUTH))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Notification not found"));
+                .andExpect(jsonPath("$[0].id").value("id-2")) // sorted latest first
+                .andExpect(jsonPath("$[1].id").value("id-1"));
+    }
+
+    @Test
+    void GET_shouldReturnEmptyList() throws Exception {
+        when(jwtUtil.getUserId("test-token")).thenReturn("user1");
+        when(repo.getByUserId("user1")).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/inapps").header("Authorization", AUTH))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void PUT_markAsRead_shouldReturnMarkedAsRead() throws Exception {
+        InAppNotification n = buildNotif("id-1", "user1", 1000L);
+        when(repo.findById("id-1")).thenReturn(Optional.of(n));
+        doNothing().when(repo).save(n);
+
+        mockMvc.perform(put("/api/inapps/read/id-1"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Marked as read"));
     }
 
     @Test
     void GET_unread_shouldReturnUnread() throws Exception {
         when(jwtUtil.getUserId("test-token")).thenReturn("user1");
-        Collection<Object> unread = List.of(buildNotif("id-1", "user1", 1000L));
-        when(repo.findByUserIdAndIsRead("user1", false)).thenReturn(unread);
+        InAppNotification n = buildNotif("id-1", "user1", 1000L);
+        when(repo.getUnread("user1")).thenReturn(List.of(n));
 
         mockMvc.perform(get("/api/inapps/unread").header("Authorization", AUTH))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("id-1"));
     }
 
     @Test
     void GET_unreadCount_shouldReturnCount() throws Exception {
         when(jwtUtil.getUserId("test-token")).thenReturn("user1");
-        Collection<Object> unread = List.of(buildNotif("id-1", "user1", 1000L));
-        when(repo.findByUserIdAndIsRead("user1", false)).thenReturn(unread);
+        InAppNotification n = buildNotif("id-1", "user1", 1000L);
+        when(repo.getUnread("user1")).thenReturn(List.of(n));
 
         mockMvc.perform(get("/api/inapps/unread/count").header("Authorization", AUTH))
                 .andExpect(status().isOk())

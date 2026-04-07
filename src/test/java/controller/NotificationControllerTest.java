@@ -73,6 +73,17 @@ class NotificationControllerTest {
     }
 
     @Test
+    void GET_byId_shouldReturnNotification() throws Exception {
+        Notification n = buildNotification();
+        n.setNotificationId("id-1");
+        when(service.getById("id-1")).thenReturn(n);
+
+        mockMvc.perform(get("/api/notifications/id-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notificationId").value("id-1"));
+    }
+
+    @Test
     void PUT_shouldUpdateNotification() throws Exception {
         Notification updated = buildNotification();
         updated.setNotificationId("id-1");
